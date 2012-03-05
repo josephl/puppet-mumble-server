@@ -13,28 +13,39 @@
 # [Remember: No empty lines between comments and class definition]
 class mumble-server {
 
-  package { 'mumble-server':
-    ensure => present,
-  }
+  include mumble-server::params
 
-  file { 'mumble-server.ini':
-    path => '/etc/mumble-server.ini',
-    ensure => file,
-    source => 'puppet:///modules/mumble-server/mumble-server.ini',
-    replace => false,
-    require => Package['mumble-server'],
-    owner => 'root',
-    group => 'mumble-server',
-    mode => '0640',
+  if ("${mumble-server::params::supported}" == false) {
+    fail("${operatingsystem} is not supported with ${module_name} at this time.")
   }
+  else {
 
-  service { 'mumble-service':
-    ensure => running,
-    enable => true,
-    subscribe => File['mumble-server.ini'],
-    require => Package['mumble-server'],
-    hasrestart => true,
-    hasstatus => true,
+    package { 'mumble-server':
+      name => "${mumble-server::params::pkg_name}",
+      ensure => present,
+    }
+
+    file { 'mumble-server.ini':
+      path => "${mumble-server::params::config}",
+      ensure => file,
+      content => template('puppet:///modules/mumble-server/mumble-server.ini.erg'),
+      replace => false,
+      require => Package['mumble-server'],
+      owner => 'root',
+      group => 'mumble-server',
+      mode => '0640',
+    }
+
+    service { 'mumble-service':
+      name => "${mumble-server::params::svc_name}",
+      ensure => running,
+      enable => true,
+      subscribe => File['mumble-server.ini'],
+      require => Package['mumble-server'],
+      hasrestart => "${mumble-server::params::restart}",
+      hasstatus => "${mumble-server::params::status}",
+    }
+
   }
 
 }
